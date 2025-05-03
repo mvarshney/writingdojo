@@ -1,6 +1,5 @@
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 from .config import get_settings
 
 settings = get_settings()
@@ -14,7 +13,7 @@ Base = declarative_base()
 def get_db():
     """
     Get a database session.
-    
+
     Yields:
         Session: SQLAlchemy database session
     """
@@ -22,4 +21,4 @@ def get_db():
     try:
         yield db
     finally:
-        db.close() 
+        db.close()

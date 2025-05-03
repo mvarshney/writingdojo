@@ -34,10 +34,10 @@ def test_create_writing_session(client: TestClient, db_session: Session, test_ch
         "word_count": 150,
         "duration": 30
     }
-    
+
     response = client.post("/api/writing-sessions/", json=session_data)
     assert response.status_code == 200
-    
+
     data = response.json()
     assert data["child_id"] == session_data["child_id"]
     assert data["topic"] == session_data["topic"]
@@ -70,14 +70,14 @@ def test_get_writing_sessions(client: TestClient, db_session: Session, test_chil
         word_count=200,
         duration=40
     )
-    
+
     db_session.add(session1)
     db_session.add(session2)
     db_session.commit()
-    
+
     response = client.get(f"/api/writing-sessions/?child_id={test_child.id}")
     assert response.status_code == 200
-    
+
     data = response.json()
     assert len(data) == 2
     assert data[0]["topic"] == "My Pet"
@@ -97,13 +97,13 @@ def test_get_writing_session(client: TestClient, db_session: Session, test_child
         word_count=150,
         duration=30
     )
-    
+
     db_session.add(session)
     db_session.commit()
-    
+
     response = client.get(f"/api/writing-sessions/{session.id}")
     assert response.status_code == 200
-    
+
     data = response.json()
     assert data["topic"] == session.topic
     assert data["content"] == session.content
@@ -123,10 +123,10 @@ def test_create_writing_assessment(client: TestClient, db_session: Session, test
         word_count=150,
         duration=30
     )
-    
+
     db_session.add(session)
     db_session.commit()
-    
+
     assessment_data = {
         "grade_level": "5th grade",
         "grammar_score": "Good",
@@ -136,13 +136,13 @@ def test_create_writing_assessment(client: TestClient, db_session: Session, test
         "strengths": ["Good story structure", "Clear narrative"],
         "areas_for_improvement": ["Vocabulary usage", "Grammar"]
     }
-    
+
     response = client.post(
         f"/api/writing-sessions/{session.id}/assessment",
         json=assessment_data
     )
     assert response.status_code == 200
-    
+
     data = response.json()
     assert data["grade_level"] == assessment_data["grade_level"]
     assert data["grammar_score"] == assessment_data["grammar_score"]
@@ -168,10 +168,10 @@ def test_get_writing_assessment(client: TestClient, db_session: Session, test_ch
         word_count=150,
         duration=30
     )
-    
+
     db_session.add(session)
     db_session.commit()
-    
+
     assessment = WritingAssessment(
         session_id=session.id,
         grade_level="5th grade",
@@ -182,16 +182,16 @@ def test_get_writing_assessment(client: TestClient, db_session: Session, test_ch
         strengths=["Good story structure", "Clear narrative"],
         areas_for_improvement=["Vocabulary usage", "Grammar"]
     )
-    
+
     db_session.add(assessment)
     db_session.commit()
-    
+
     response = client.get(f"/api/writing-sessions/{session.id}/assessment")
     assert response.status_code == 200
-    
+
     data = response.json()
     assert data["grade_level"] == assessment.grade_level
     assert data["grammar_score"] == assessment.grammar_score
     assert data["structure_score"] == assessment.structure_score
     assert data["vocabulary_score"] == assessment.vocabulary_score
-    assert data["feedback"] == assessment.feedback 
+    assert data["feedback"] == assessment.feedback
