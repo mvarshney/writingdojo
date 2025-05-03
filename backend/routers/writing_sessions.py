@@ -2,8 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from ..database import get_db
-from ..models import WritingSession, WritingAssessment, ChildProfile
-from pydantic import BaseModel
+from ..models.writing_session import WritingSession
+from ..models.writing_assessment import WritingAssessment
+from ..models.child_profile import ChildProfile
+from ..schemas.writing_session import WritingSessionCreate, WritingSessionResponse
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
 
@@ -31,8 +34,7 @@ class WritingSessionResponse(WritingSessionBase):
     id: int
     created_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class WritingAssessmentBase(BaseModel):
@@ -53,82 +55,68 @@ class WritingAssessmentResponse(WritingAssessmentBase):
     id: int
     created_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 @router.post("/", response_model=WritingSessionResponse)
-async def create_writing_session(
-    session: WritingSessionCreate,
-    db: Session = Depends(get_db)
-):
-    """
-    Create a new writing session.
-    
-    Args:
-        session: Writing session data
-        db: Database session
-    
-    Returns:
-        Created writing session
-    """
+def create_writing_session(writing_session: WritingSessionCreate, db: Session = Depends(get_db)):
+    """Create a new writing session."""
     # Verify child exists
-    child = db.query(ChildProfile).filter(ChildProfile.id == session.child_id).first()
-    if child is None:
+    child = db.query(ChildProfile).filter(ChildProfile.id == writing_session.child_id).first()
+    if not child:
         raise HTTPException(status_code=404, detail="Child profile not found")
     
-    db_session = WritingSession(**session.dict())
-    db.add(db_session)
+    db_writing_session = WritingSession(**writing_session.dict())
+    db.add(db_writing_session)
     db.commit()
-    db.refresh(db_session)
-    return db_session
+    db.refresh(db_writing_session)
+    return db_writing_session
 
 
 @router.get("/", response_model=List[WritingSessionResponse])
-async def get_writing_sessions(
-    child_id: int = None,
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
-):
-    """
-    Get a list of writing sessions.
-    
-    Args:
-        child_id: Optional filter by child ID
-        skip: Number of records to skip
-        limit: Maximum number of records to return
-        db: Database session
-    
-    Returns:
-        List of writing sessions
-    """
-    query = db.query(WritingSession)
-    if child_id:
-        query = query.filter(WritingSession.child_id == child_id)
-    sessions = query.offset(skip).limit(limit).all()
-    return sessions
+def get_writing_sessions(db: Session = Depends(get_db)):
+    """Get all writing sessions."""
+    return db.query(WritingSession).all()
 
 
-@router.get("/{session_id}", response_model=WritingSessionResponse)
-async def get_writing_session(
-    session_id: int,
-    db: Session = Depends(get_db)
-):
-    """
-    Get a specific writing session by ID.
-    
-    Args:
-        session_id: ID of the writing session
-        db: Database session
-    
-    Returns:
-        Writing session
-    """
-    session = db.query(WritingSession).filter(WritingSession.id == session_id).first()
-    if session is None:
+@router.get("/{writing_session_id}", response_model=WritingSessionResponse)
+def get_writing_session(writing_session_id: int, db: Session = Depends(get_db)):
+    """Get a specific writing session by ID."""
+    writing_session = db.query(WritingSession).filter(WritingSession.id == writing_session_id).first()
+    if not writing_session:
         raise HTTPException(status_code=404, detail="Writing session not found")
-    return session
+    return writing_session
+
+
+@router.put("/{writing_session_id}", response_model=WritingSessionResponse)
+def update_writing_session(
+    writing_session_id: int,
+    writing_session: WritingSessionCreate,
+    db: Session = Depends(get_db)
+):
+    """Update a writing session."""
+    db_writing_session = db.query(WritingSession).filter(WritingSession.id == writing_session_id).first()
+    if not db_writing_session:
+        raise HTTPException(status_code=404, detail="Writing session not found")
+    
+    for key, value in writing_session.dict().items():
+        setattr(db_writing_session, key, value)
+    
+    db.commit()
+    db.refresh(db_writing_session)
+    return db_writing_session
+
+
+@router.delete("/{writing_session_id}")
+def delete_writing_session(writing_session_id: int, db: Session = Depends(get_db)):
+    """Delete a writing session."""
+    writing_session = db.query(WritingSession).filter(WritingSession.id == writing_session_id).first()
+    if not writing_session:
+        raise HTTPException(status_code=404, detail="Writing session not found")
+    
+    db.delete(writing_session)
+    db.commit()
+    return {"message": "Writing session deleted successfully"}
 
 
 @router.post("/{session_id}/assessment", response_model=WritingAssessmentResponse)

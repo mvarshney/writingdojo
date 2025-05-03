@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from ..database import get_db
-from ..models import ChildProfile
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
+from ..database import get_db
+from ..models.child_profile import ChildProfile
+from ..schemas.child_profile import ChildProfileCreate, ChildProfileResponse
 
 router = APIRouter(prefix="/api/child-profiles", tags=["child-profiles"])
 
@@ -31,122 +32,60 @@ class ChildProfileResponse(ChildProfileBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 @router.post("/", response_model=ChildProfileResponse)
-async def create_child_profile(
-    profile: ChildProfileCreate,
-    db: Session = Depends(get_db)
-):
-    """
-    Create a new child profile.
-    
-    Args:
-        profile: Child profile data
-        db: Database session
-    
-    Returns:
-        Created child profile
-    """
-    db_profile = ChildProfile(**profile.dict())
-    db.add(db_profile)
+def create_child_profile(child_profile: ChildProfileCreate, db: Session = Depends(get_db)):
+    """Create a new child profile."""
+    db_child_profile = ChildProfile(**child_profile.dict())
+    db.add(db_child_profile)
     db.commit()
-    db.refresh(db_profile)
-    return db_profile
+    db.refresh(db_child_profile)
+    return db_child_profile
 
 
 @router.get("/", response_model=List[ChildProfileResponse])
-async def get_child_profiles(
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
-):
-    """
-    Get a list of child profiles.
-    
-    Args:
-        skip: Number of records to skip
-        limit: Maximum number of records to return
-        db: Database session
-    
-    Returns:
-        List of child profiles
-    """
-    profiles = db.query(ChildProfile).offset(skip).limit(limit).all()
-    return profiles
+def get_child_profiles(db: Session = Depends(get_db)):
+    """Get all child profiles."""
+    return db.query(ChildProfile).all()
 
 
-@router.get("/{profile_id}", response_model=ChildProfileResponse)
-async def get_child_profile(
-    profile_id: int,
-    db: Session = Depends(get_db)
-):
-    """
-    Get a specific child profile by ID.
-    
-    Args:
-        profile_id: ID of the child profile
-        db: Database session
-    
-    Returns:
-        Child profile
-    """
-    profile = db.query(ChildProfile).filter(ChildProfile.id == profile_id).first()
-    if profile is None:
+@router.get("/{child_profile_id}", response_model=ChildProfileResponse)
+def get_child_profile(child_profile_id: int, db: Session = Depends(get_db)):
+    """Get a specific child profile by ID."""
+    child_profile = db.query(ChildProfile).filter(ChildProfile.id == child_profile_id).first()
+    if not child_profile:
         raise HTTPException(status_code=404, detail="Child profile not found")
-    return profile
+    return child_profile
 
 
-@router.put("/{profile_id}", response_model=ChildProfileResponse)
-async def update_child_profile(
-    profile_id: int,
-    profile: ChildProfileUpdate,
+@router.put("/{child_profile_id}", response_model=ChildProfileResponse)
+def update_child_profile(
+    child_profile_id: int,
+    child_profile: ChildProfileCreate,
     db: Session = Depends(get_db)
 ):
-    """
-    Update a child profile.
-    
-    Args:
-        profile_id: ID of the child profile
-        profile: Updated profile data
-        db: Database session
-    
-    Returns:
-        Updated child profile
-    """
-    db_profile = db.query(ChildProfile).filter(ChildProfile.id == profile_id).first()
-    if db_profile is None:
+    """Update a child profile."""
+    db_child_profile = db.query(ChildProfile).filter(ChildProfile.id == child_profile_id).first()
+    if not db_child_profile:
         raise HTTPException(status_code=404, detail="Child profile not found")
     
-    for key, value in profile.dict().items():
-        setattr(db_profile, key, value)
+    for key, value in child_profile.dict().items():
+        setattr(db_child_profile, key, value)
     
     db.commit()
-    db.refresh(db_profile)
-    return db_profile
+    db.refresh(db_child_profile)
+    return db_child_profile
 
 
-@router.delete("/{profile_id}")
-async def delete_child_profile(
-    profile_id: int,
-    db: Session = Depends(get_db)
-):
-    """
-    Delete a child profile.
-    
-    Args:
-        profile_id: ID of the child profile
-        db: Database session
-    
-    Returns:
-        Success message
-    """
-    db_profile = db.query(ChildProfile).filter(ChildProfile.id == profile_id).first()
-    if db_profile is None:
+@router.delete("/{child_profile_id}")
+def delete_child_profile(child_profile_id: int, db: Session = Depends(get_db)):
+    """Delete a child profile."""
+    child_profile = db.query(ChildProfile).filter(ChildProfile.id == child_profile_id).first()
+    if not child_profile:
         raise HTTPException(status_code=404, detail="Child profile not found")
     
-    db.delete(db_profile)
+    db.delete(child_profile)
     db.commit()
     return {"message": "Child profile deleted successfully"} 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from typing import Dict, Any, List
-from ..agents import AgentOrchestrator
+from ..agents.orchestrator import AgentOrchestrator
 
 router = APIRouter(prefix="/api/agents", tags=["agents"])
 orchestrator = AgentOrchestrator()

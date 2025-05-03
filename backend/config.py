@@ -3,11 +3,13 @@ from functools import lru_cache
 import os
 from dotenv import load_dotenv
 
+
 load_dotenv()
+
 
 class Settings(BaseSettings):
     # Database Configuration
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/writing_dojo")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./writing_dojo.db")
     
     # OpenAI Configuration
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
@@ -19,6 +21,7 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+
 
 @lru_cache()
 def get_settings() -> Settings:

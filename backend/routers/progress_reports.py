@@ -2,8 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from ..database import get_db
-from ..models import ProgressReport, ChildProfile
-from pydantic import BaseModel
+from ..models.child_profile import ChildProfile
+from ..models.writing_session import WritingSession
+from ..models.writing_assessment import WritingAssessment
+from ..schemas.progress_report import ProgressReportResponse
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
 
@@ -31,8 +34,7 @@ class ProgressReportResponse(ProgressReportBase):
     id: int
     created_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 @router.post("/", response_model=ProgressReportResponse)
@@ -159,4 +161,45 @@ async def delete_progress_report(
     
     db.delete(db_report)
     db.commit()
-    return {"message": "Progress report deleted successfully"} 
+    return {"message": "Progress report deleted successfully"}
+
+
+@router.get("/{child_id}", response_model=ProgressReportResponse)
+def get_child_progress(child_id: int, db: Session = Depends(get_db)):
+    """Get progress report for a specific child."""
+    # Verify child exists
+    child = db.query(ChildProfile).filter(ChildProfile.id == child_id).first()
+    if not child:
+        raise HTTPException(status_code=404, detail="Child profile not found")
+    
+    # Get all writing sessions for the child
+    writing_sessions = db.query(WritingSession).filter(WritingSession.child_id == child_id).all()
+    
+    # Get all assessments for these sessions
+    session_ids = [session.id for session in writing_sessions]
+    assessments = db.query(WritingAssessment).filter(WritingAssessment.writing_session_id.in_(session_ids)).all()
+    
+    # Calculate average score
+    total_score = sum(assessment.score for assessment in assessments) if assessments else 0
+    average_score = total_score / len(assessments) if assessments else 0
+    
+    # Compile areas for improvement and strengths
+    areas_for_improvement = []
+    strengths = []
+    for assessment in assessments:
+        if assessment.areas_for_improvement:
+            areas_for_improvement.extend(assessment.areas_for_improvement.split(","))
+        if assessment.strengths:
+            strengths.extend(assessment.strengths.split(","))
+    
+    # Remove duplicates and get top 5
+    areas_for_improvement = list(set(areas_for_improvement))[:5]
+    strengths = list(set(strengths))[:5]
+    
+    return {
+        "child_id": child_id,
+        "total_sessions": len(writing_sessions),
+        "average_score": average_score,
+        "areas_for_improvement": areas_for_improvement,
+        "strengths": strengths
+    } 
