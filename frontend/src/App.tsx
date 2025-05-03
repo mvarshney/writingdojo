@@ -43,7 +43,6 @@ function App() {
                 <WritingSession
                   topic="A day in the life of a superhero"
                   writingMode="creative"
-                  duration={30}
                   onSessionComplete={handleSessionComplete}
                 />
               }

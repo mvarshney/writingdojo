@@ -1,41 +1,32 @@
 import React, { useState, useEffect } from 'react';
 
 interface TimerProps {
-  duration: number; // in minutes
-  onTimeUp: () => void;
   isActive: boolean;
 }
 
-const Timer: React.FC<TimerProps> = ({ duration, onTimeUp, isActive }) => {
-  const [timeLeft, setTimeLeft] = useState(duration * 60); // convert to seconds
+const Timer: React.FC<TimerProps> = ({ isActive }) => {
+  const [minutes, setMinutes] = useState(0);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
-    if (isActive && timeLeft > 0) {
+    if (isActive) {
       interval = setInterval(() => {
-        setTimeLeft((prevTime) => {
-          if (prevTime <= 1) {
-            clearInterval(interval);
-            onTimeUp();
-            return 0;
-          }
-          return prevTime - 1;
-        });
-      }, 1000);
+        setMinutes((prevMinutes) => prevMinutes + 1);
+      }, 60000); // Update every minute (60,000 milliseconds)
     }
 
-    return () => clearInterval(interval);
-  }, [isActive, timeLeft, onTimeUp]);
-
-  const minutes = Math.floor(timeLeft / 60);
-  const seconds = timeLeft % 60;
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isActive]);
 
   return (
     <div className="flex items-center justify-center">
       <div className="text-2xl font-bold text-gray-800">
-        {minutes.toString().padStart(2, '0')}:
-        {seconds.toString().padStart(2, '0')}
+        {minutes.toString().padStart(2, '0')}:00
       </div>
     </div>
   );

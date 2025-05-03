@@ -7,14 +7,12 @@ import AssessmentDisplay from './AssessmentDisplay';
 interface WritingSessionProps {
   topic: string;
   writingMode: string;
-  duration: number;
   onSessionComplete: (content: string, wordCount: number) => void;
 }
 
 const WritingSession: React.FC<WritingSessionProps> = ({
   topic,
   writingMode,
-  duration,
   onSessionComplete,
 }) => {
   const [isActive, setIsActive] = useState(true);
@@ -27,7 +25,7 @@ const WritingSession: React.FC<WritingSessionProps> = ({
     setWordCount(newWordCount);
   };
 
-  const handleTimeUp = () => {
+  const handleEndSession = () => {
     setIsActive(false);
     setShowAssessment(true);
     onSessionComplete(content, wordCount);
@@ -38,11 +36,17 @@ const WritingSession: React.FC<WritingSessionProps> = ({
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-800">Writing Session</h1>
-          <Timer
-            duration={duration}
-            onTimeUp={handleTimeUp}
-            isActive={isActive}
-          />
+          <div className="flex items-center space-x-4">
+            <Timer isActive={isActive} />
+            {isActive && (
+              <button
+                onClick={handleEndSession}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              >
+                I am done
+              </button>
+            )}
+          </div>
         </div>
 
         <TopicDisplay
